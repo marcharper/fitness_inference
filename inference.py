@@ -375,8 +375,10 @@ if __name__ == '__main__':
         try:
             module = __import__(module_name)
             #death_probabilities_func = mpsim.moran.sigmoid_death
-            death_probabilities_func = mpsim.moran.moran_death
-            single_run_test(module, N=20, death_probabilities_func=death_probabilities_func)
+            #death_probabilities_func = mpsim.moran.moran_cascade
+            #death_probabilities_func = mpsim.moran.moran_death
+            death_probabilities_func = mpsim.moran.linear_death
+            single_run_test(module, N=40, death_probabilities_func=death_probabilities_func)
         except ImportError:
             print "%s is not a valid module" % (module_name)
             exit()

@@ -168,11 +168,11 @@ def reproduction_rate_test(parameters):
             for a in range(1, len(alphas[n])-1):
                 x += alphas[n][a-1] / float(a)
                 y += betas[n][a-1]/ float(n-a)
-            if x != 0:
-                means.append(y / x)
-                return_runs[0].append((alphas, betas))
-            else:
-                return_runs[1].append((alphas, betas))
+        if x != 0:
+            means.append(y / x)
+            return_runs[0].append((alphas, betas))
+        else:
+            return_runs[1].append((alphas, betas))
     return return_runs, numpy.mean(means), numpy.std(means), len(means)
     
 #def reproduction_rate_test(parameters):
