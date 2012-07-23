@@ -71,13 +71,14 @@ def likelihood_table(N, partition_points):
     
 #### Convert to use table and conjugate parameters.    
 
-# This is a much faster version utilizing numpy and log-space.
+# This is a much faster version utilizing numpy and log-space probability calculations.
 def construct_posterior(N, conjugate_parameters, prior_points, partition, tables):
     posterior = Posterior(partition, prior_points)
     alphas, betas = conjugate_parameters
     alphas = numpy.array([alphas])
     betas = numpy.array([betas])
     beta_table, alpha_table = tables
+    #print alphas.transpose().size, alpha_table.size
     t = numpy.dot(numpy.array([1.]*(N-1)), (alphas.transpose() * alpha_table + betas.transpose() * beta_table))
     t = lognormalize(t)
     posterior.update(t)

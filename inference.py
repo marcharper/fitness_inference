@@ -28,41 +28,6 @@ def systematic_state_generator(N, each=1000):
         for _ in range(each):
             yield (i, N-i)
 
-## Example priors
-#prior = stats.gamma(2, scale=0.5).pdf
-#prior = stats.gamma(1, scale=0.8678794).pdf
-#prior = stats.gamma(2, scale=1.67835).pdf
-            
-### Multiprocessing functions for inferences. ##
-
-#def batch(args):
-    #run, N, r, table, prior_points, partition, max_length, sample_size = args
-    #tuples = list(convert_run_to_tuples(N, run, max_length=max_length, sample_size=sample_size))
-    ##posterior = construct_posterior(N, run, prior_points, partition, table)
-    #posterior = construct_posterior(N, tuples, prior_points, partition, table)
-    #return (posterior.mean()[0], posterior.mode()[0])
-
-#def params_gen(runs, N, r, table, prior, partition, max_length, sample_size):
-    #"""Generator for batch parameters."""
-    #for run in runs:
-        #yield run, N, r, table, prior, partition, max_length, sample_size
-    
-#def run_batches(runs, N, r, table, prior_points, partition, max_length=None, sample_size=None, processes=None):
-    #"""Runs simulations on multiple processing cores in batch sizes dictated by iters_gen, posting data to callbacks to reduce memory footprint."""
-    #if not processes:
-        #processes = multiprocessing.cpu_count()
-    #params = list(params_gen(runs, N, r, table, prior_points, partition, max_length, sample_size))
-    #pool = multiprocessing.Pool(processes=processes)
-    #try:
-        #results = pool.map(batch, params)
-        #pool.close()
-        #pool.join()
-    #except KeyboardInterrupt:
-        #print 'Control-C received. Exiting.'
-        #pool.terminate()
-        #exit()
-    #return results
-
 ## Multiprocessing functions for inferences. ##
 
 def batch(args):
@@ -124,36 +89,6 @@ def inference_test(N, r, table, runs, prior, partition):
     m = numpy.mean(means)
     s = numpy.std(means)
     return m, s
-
-### Compute parameter estimates for heatmap.
-#def heatmap_data(rs=numpy.arange(0.1,3.01,0.1), Ns=range(4,30,2), filename="heatmap_data.txt"):
-    #steps = 1000
-    #R = 5
-    #bounds = [0, R]
-    ##prior = uniform(bounds[0], bounds[1])
-    ##prior = stats.gamma(1, scale=1).pdf
-    #prior = stats.gamma(2, scale=1.67835).pdf
-    #prior = Memoize(prior) # greatly speeds up computations
-    ##handle = open(filename, 'w')
-    #partition = Partition(bounds[0], bounds[1], steps)
-    #for N in Ns:
-        #table = likelihood_table(N, partition.points)
-        #for r in rs:
-            #fitness_landscape = mpsim.moran.fitness_static(r)
-            #igen = mpsim.generators.random_state_generator(2,N)
-            ##igen = mpsim.generators.constant_generator((N//2,N//2))
-            #runs = mpsim.main.two_type_moran_process_simulations(N, fitness_landscape, iterations=runs_per_test, initial_state_generator=igen)
-            #runs = [history for (seed, length, history) in runs]
-            #runs = convert_runs(runs, sample_size=sample_size)
-            #means = []
-            #for tuples in runs:
-                ##posterior = construct_posterior(N, tuples, prior, partition, table)
-                #posterior = construct_posterior(N, tuples, partition)
-                #means.append(posterior.mean()) 
-            #m = numpy.mean(means)
-            #s = numpy.std(means)
-            ##print >> handle, r, N, m, s
-            #print N, r, m, s
 
 #def single_run_video(N=30, bounds=(0, 10), steps=1000, num_runs=1000, r=2.0):
     #k = int(r * N / (1 + r))
@@ -268,9 +203,13 @@ def inference_test(N, r, table, runs, prior, partition):
             
             #pyplot.savefig('conjugate/' + str(ensure_digits(digits, str(i))) + ".png", dpi=160, pad_inches=0.5)
         #exit()
-
-def single_run_test(module, N=30, bounds=(0, 20), steps=1000, num_runs=10000, r=1.05):
+#sigmoid_death(N)
+def single_run_test(module, N=20, bounds=(0, 20), steps=1000, num_runs=1000, r=1.2, death_probabilities_func=None, sample_size=None):
     """Single run inference test."""
+    if death_probabilities_func:
+        death_probabilities = death_probabilities_func(N)
+    else:
+        death_probabilities = None
     i = max(1, int(r*N / (1. + r)))
     igen = mpsim.generators.constant_generator((i,N - i))
     partition = Partition(bounds[0], bounds[1], steps)
@@ -278,9 +217,10 @@ def single_run_test(module, N=30, bounds=(0, 20), steps=1000, num_runs=10000, r=
     table = module.likelihood_table(N, partition.points)
     fitness_landscape = mpsim.moran.fitness_static(r)
     print "Generating %s trajectories..." % (str(num_runs))
-    runs = mpsim.main.two_type_moran_process_simulations(N, fitness_landscape=fitness_landscape, edge_function=module.edge_function, iterations=num_runs, initial_state_generator=igen)
+    runs = mpsim.main.two_type_moran_process_simulations(N, fitness_landscape=fitness_landscape, edge_function=module.edge_function, iterations=num_runs, initial_state_generator=igen, death_probabilities=death_probabilities)
     runs = [history for (seed, length, history) in runs]
-    #runs = module.convert_runs(N, runs)
+    #print runs[1]
+    #exit()
     ## Prior setup
     prior_points = None
     prior = stats.gamma(2, scale=0.5).pdf
@@ -288,32 +228,38 @@ def single_run_test(module, N=30, bounds=(0, 20), steps=1000, num_runs=10000, r=
     prior_points = partition.map(prior)
     means = []
     print "Computing inferred values of parameter r..."
-    #global construct_posterior
-    #global convert_run_to_tuples
+    global construct_posterior
     construct_posterior = module.construct_posterior
-    convert_run_to_tuples = module.convert_run_to_tuples
-    posteriors = run_batches(runs, N, r, table, prior_points, partition)
-    for i, posterior in enumerate(posteriors):
-        mean, mode = posterior
-        #mean = posterior.mean()[0]
-        means.append(mean)
-        #mode = posterior.mode()[0]
-        #print i, mean, mode
-    del construct_posterior
-    #for i, tuples in enumerate(runs):
-        #posterior = module.construct_posterior(N, tuples, prior_points, partition, table)
-        #mean = posterior.mean()[0]
+    global convert_run_to_conjugate_parameters    
+    convert_run_to_conjugate_parameters = module.convert_run_to_conjugate_parameters
+
+    #for run in runs:
+        #conjugate_parameters = convert_run_to_conjugate_parameters(N, run, sample_size=sample_size)
+        ##print conjugate_parameters
+        #posterior = construct_posterior(N, conjugate_parameters, prior_points, partition, table)
+        #print (posterior.mean()[0], posterior.mode()[0])
+    #exit()
+    batch_results = run_batches(N, runs, prior_points, partition, table, sample_size=sample_size)
+    conjugate_parameters = [c for (c, mean, mode) in batch_results]
+    _, m, s, c = module.reproduction_rate_test(conjugate_parameters)
+    print m, s, c,
+    means = [mean for (c, mean, mode) in batch_results]
+    print numpy.mean(means), numpy.std(means),
+    modes = [mode for (c, mean, mode) in batch_results]
+    print numpy.mean(modes), numpy.std(modes)
+    
+    #for i, posterior in enumerate(posteriors):
+        #mean, mode = posterior
         #means.append(mean)
-        #mode = posterior.mode()[0]
-        #print i, mean, mode
-    print numpy.mean(means), numpy.std(means)
-    i = max(1, int(r*N / (1. + r)))
-    print float(len([x for x in means if x > 1])) / num_runs, (1. - r**(i-N)) / (1. - r**(-N))
+    #del construct_posterior
+    #print numpy.mean(means), numpy.std(means)
+    #i = max(1, int(r*N / (1. + r)))
+    #print float(len([x for x in means if x > 1])) / num_runs, (1. - r**(i-N)) / (1. - r**(-N))
     #pyplot.clf()
     #pyplot.hist(means, bins=30)
     #pyplot.show()
     
-def cache_simulation_results(module, filename, Ns, rs, prior=None, bounds=None, num_runs=10000, sample_size=None, steps=1000):
+def cache_simulation_results(module, filename, Ns, rs, prior=None, bounds=None, num_runs=1000, sample_size=None, steps=1000):
     if not prior:
         prior = stats.gamma(2, scale=0.5).pdf
     if not bounds:
@@ -352,7 +298,8 @@ def cache_simulation_results(module, filename, Ns, rs, prior=None, bounds=None, 
                             #print "sample_size"
                             #exit()
                 #print conjugate_parameters
-                means = [mean for (c, mean, mode) in batch_results]
+                #means = [mean for (c, mean, mode) in batch_results]
+
                 #all_tuples = []
                 #for run in runs:
                     #tuples = list(module.convert_run_to_tuples(N, run, sample_size=sample_size))
@@ -371,17 +318,19 @@ def cache_simulation_results(module, filename, Ns, rs, prior=None, bounds=None, 
                     ##mean = posterior.mean()[0]
                     #means.append(mean)
                 #print means
+                means = [mean for (c, mean, mode) in batch_results]
                 row.extend([numpy.mean(means), numpy.std(means)])
-                # Also, look at estimate if all conjugate_parameters are joined
-                all_conjugates = []
-                for i in range(len(conjugate_parameters[0])):
-                    cons = sum(numpy.array(x[0]) for x in conjugate_parameters)
-                    all_conjugates.append(cons)
-                posterior = construct_posterior(N, all_conjugates, prior_points, partition, table)
-                row.extend([posterior.mean()[0], posterior.mode()[0]])
-                writer.writerow(map(str,row))
-                #print all_conjugates
-                
+                modes = [mode for (c, mean, mode) in batch_results]
+                row.extend([numpy.mean(modes), numpy.std(modes)])
+                ## Also, look at estimate if all conjugate_parameters are joined
+                # Produces terrible estimates in general.
+                #all_conjugates = []
+                #for i in range(len(conjugate_parameters[0])):
+                    #cons = sum(numpy.array(x[0]) for x in conjugate_parameters)
+                    #all_conjugates.append(cons)
+                #posterior = construct_posterior(N, all_conjugates, prior_points, partition, table)
+                #row.extend([posterior.mean()[0], posterior.mode()[0]])
+                #writer.writerow(map(str,row))                
                 
                 # Check for agreement with previous (much slower) method
                 #from infer2 import run_batches as run_batches2
@@ -405,16 +354,17 @@ def cache_simulation_results(module, filename, Ns, rs, prior=None, bounds=None, 
                 #print r,N,i
 
 def generate_heatmap_data():
-    rs = numpy.arange(0.1,3.1,0.1)
-    Ns = range(3,61,1)
+    rs = numpy.arange(0.1,2.1,0.1)
+    Ns = range(3,51,1)
     for module_name in ['fps', 'moran']:
         module = __import__(module_name)
         filename = module_name + ".csv"
         cache_simulation_results(module, filename, Ns, rs)
-        for sample_size in [10, 20]:
-            module = __import__("fps")
-            filename = '_'.join([module_name, "sample_size", str(sample_size)]) + ".csv"
-            cache_simulation_results(module, filename, Ns, rs, sample_size=sample_size)
+    for sample_size in [10, 20]:
+        module_name = "fps"
+        module = __import__(module_name)
+        filename = '_'.join([module_name, "sample_size", str(sample_size)]) + ".csv"
+        cache_simulation_results(module, filename, Ns, rs, sample_size=sample_size)
                 
 if __name__ == '__main__':
     try:
@@ -423,7 +373,10 @@ if __name__ == '__main__':
         generate_heatmap_data()
     else:
         try:
-            module = __import__(module_name)            
+            module = __import__(module_name)
+            #death_probabilities_func = mpsim.moran.sigmoid_death
+            death_probabilities_func = mpsim.moran.moran_death
+            single_run_test(module, N=20, death_probabilities_func=death_probabilities_func)
         except ImportError:
             print "%s is not a valid module" % (module_name)
             exit()
@@ -433,44 +386,5 @@ if __name__ == '__main__':
     exit()
     
     single_run_video(N=100, bounds=[0, 100], r=50.)
-    exit()
-    
-    R = 10
-    bounds = [0, R]
-    prior = stats.gamma(2, scale=0.5).pdf
-    rs=numpy.arange(0.1,3.01,0.1)
-    Ns=range(3,80,1)
-    sample_size = None
-    #rs = []
-    #rs.extend(list(numpy.arange(0.01,3.01,0.01)))
-    ##rs.extend(list(numpy.arange(1,5,0.01)))    
-    #Ns=range(2,11,1)
-    
-    prior_points = None
-    prior = stats.gamma(2, scale=0.5).pdf
-    partition = Partition(bounds[0], bounds[1], steps)
-    prior_points = partition.map(prior)
-
-    handle = open("comparison_test.txt",'w')
-    for r in rs:
-        fitness_landscape = mpsim.moran.fitness_static(r)
-        for N in Ns:
-
-            table = module.likelihood_table(N, partition.points)
-            for i in range(1, N):
-                igen = mpsim.generators.constant_generator((N-i,i))
-                results = method_comparison(module, N, r, prior_points, partition, table=table, igen=igen, sample_size=sample_size)
-                print >> handle, r, N, i, " ".join(map(str, results))
-                print r,N,i
-    exit()
-
-    heatmap_data()
-    exit()
-
-    rs=numpy.arange(0.0,2.01,0.05)
-    Ns=range(4,50,1)
-    for r in rs:
-        for N in Ns:
-            print N, r, inference_test(N, r, num_runs=5000, min_length=5, max_length=100, sample_size=100)
     exit()
 
