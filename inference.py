@@ -356,15 +356,16 @@ def cache_simulation_results(module, filename, Ns, rs, prior=None, bounds=None, 
 def generate_heatmap_data():
     rs = numpy.arange(0.1,2.1,0.1)
     Ns = range(3,51,1)
-    for module_name in ['fps', 'moran']:
+    #for module_name in ['fps', 'moran']:
+    for module_name in ['moran']:
         module = __import__(module_name)
         filename = module_name + ".csv"
         cache_simulation_results(module, filename, Ns, rs)
-    for sample_size in [10, 20]:
-        module_name = "fps"
-        module = __import__(module_name)
-        filename = '_'.join([module_name, "sample_size", str(sample_size)]) + ".csv"
-        cache_simulation_results(module, filename, Ns, rs, sample_size=sample_size)
+    #for sample_size in [10, 20]:
+        #module_name = "fps"
+        #module = __import__(module_name)
+        #filename = '_'.join([module_name, "sample_size", str(sample_size)]) + ".csv"
+        #cache_simulation_results(module, filename, Ns, rs, sample_size=sample_size)
                 
 if __name__ == '__main__':
     try:
