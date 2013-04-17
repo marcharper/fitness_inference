@@ -27,18 +27,6 @@ def likelihood(a,b,d):
         def p(r):
             return (a*a + b*b*r) / (a + b) * 1. / (a + b * r)
     return p
-
-#def likelihood_table(N, partition_points):
-    #"""Precompute likelihood functions on partitions for computational efficiency."""
-    #table = []
-    #for a in range(1, N):
-        #row = []
-        #b = N - a
-        #for d in [-1,0,1]:
-            #vfunc = numpy.vectorize(likelihood(a,b,d))
-            #row.append(vfunc(partition_points))
-        #table.append(row)
-    #return table
     
 def likelihood_table(N, partition_points):
     """Precompute likelihood functions on partitions for computational efficiency."""
@@ -47,24 +35,12 @@ def likelihood_table(N, partition_points):
     for d in [1, -1, 0]:
         table = []
         for a in range(1, N):
-            #row = []
             b = N - a
             vfunc = numpy.vectorize(likelihood(a,b,d))
             table.append(numpy.log(vfunc(partition_points)))
         tables.append(numpy.array(table))
     return tables      
-    
-#def construct_posterior(N, conjugate_parameters, prior_points, partition, table):
-    #"""Constructs posterior from run tuples and prior."""
-    #posterior = Posterior(partition, prior_points)
-    #(alphas, betas, gammas) = conjugate_parameters
-    #for a, y in tuples:
-        #b = N-a
-        #d = y-a
-        #posterior.update(table[a-1][d+1])
-    #return posterior
-    
-# This is a much faster version utilizing numpy and log-space.
+
 def construct_posterior(N, conjugate_parameters, prior_points, partition, tables):
     posterior = Posterior(partition, prior_points)
     alphas, betas, gammas = conjugate_parameters
@@ -122,8 +98,6 @@ def reproduction_rate_test(parameters):
     means = []
     return_runs = [[],[]]
     for alphas, betas, gammas in parameters:
-        #print alphas, betas
-        #N = len(alphas) + 1
         x = sum(alphas)
         y = sum(betas)
         #for a in range(1, len(alphas)-1):
@@ -136,22 +110,3 @@ def reproduction_rate_test(parameters):
             return_runs[1].append((alphas, betas))
     return return_runs, numpy.mean(means), numpy.std(means), len(means)
 
-#def reproduction_rate_test(N, r, runs):
-    #means = []
-    #return_runs = [[],[]]
-    #for run_tuples in runs:
-        #x = 0.
-        #y = 0.
-        #for i, j in run_tuples:
-            #if j - i == 1:
-                #x += 1
-            #elif j - i == -1:
-                #y += 1
-        #if x != 0:
-            #means.append(y / x)
-        #if x != 0:
-            #return_runs[0].append(run_tuples)
-        #else:
-            #return_runs[1].append(run_tuples)
-    ##print numpy.mean(means), numpy.std(means), len(means)
-    #return return_runs, numpy.mean(means), numpy.std(means), len(means)

@@ -28,7 +28,6 @@ class Partition(object):
     def map(self, func):
         """Computes the values of a function on the points of a partition."""
         # Have to use prior points here to make multiprocessing happy because of pickling issues
-        # This is how to extract the points
         vfunc = numpy.vectorize(func)
         values = vfunc(self.points)
         return tuple(values)
@@ -98,11 +97,3 @@ class Posterior(object):
         """Return points of the partitition and probability distribution values for plotting."""
         #return tuple(self.points), tuple(self.values)
         return self.points, self.values
-
-#def compute_on_partition(func, partition):
-    #"""Computes the values of a function on the points of a partition."""
-    ## Have to use prior points here to make multiprocessing happy because of pickling issues
-    ## This is how to extract the points
-    #vfunc = numpy.vectorize(func)
-    #prior_points = vfunc(partition.points)
-    #return prior_points

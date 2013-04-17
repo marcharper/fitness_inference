@@ -55,28 +55,6 @@ def birth_death_distribution(alphas, betas, N):
         return math.exp(log_s)
     return p
 
-#def mode(alphas, betas, N):
-    #p = 0.
-    #q = 0.
-    #for a in range(1, N):
-        #p += float(a) * betas[a]
-        #q += (N - float(a)) * alphas[a]
-    #return p / q
-
-#def mode(alphas, betas, N):
-    #A = 0.
-    #B = 0.
-    #C = 0.
-    #for a in range(1, N):
-        #A -= (N - float(a)) * (N - float(a)) * (alphas[a] + 1)
-        #B -= a * (N - float(a)) * (betas[a] - 1) - (N - float(a)) * (alphas[a] + 1) * (a + 1)
-        #C += a * (a + 1) * (betas[a] - 1)
-    ##A = -A
-    #d = math.sqrt(B*B - 4 * A * C)
-    #print d
-    #print (-B + d) / (2 * A)
-    #print (-B - d) / (2 * A)
-
 def fig_1_priors(functions_labels, N=30, steps=1000):
     a = 0.0000001
     b = N // 3
@@ -90,7 +68,7 @@ def fig_1_priors(functions_labels, N=30, steps=1000):
         print "mean:", mean(f, a, b, steps=steps) / norm
         pyplot.plot(xs, ys, label=label)
     pyplot.grid(True)
-    pyplot.legend()
+    #pyplot.legend()
     pyplot.xlabel("Relative Fitness r")
     pyplot.show()
     

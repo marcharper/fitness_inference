@@ -84,11 +84,12 @@ def inference_test(N, r, table, runs, prior, partition):
     means = []
     for run_tuples in runs:
         #posterior = construct_posterior(N, run_tuples, prior, partition, table)
-        posterior = construct_posterior(N, run_tuples, partition)
+        posterior = construct_posterior(N, conjugate_parameters, prior_points, partition, table)
+        #posterior = construct_posterior(N, run_tuples, partition)
         means.append(posterior.mean()) 
     m = numpy.mean(means)
     s = numpy.std(means)
-    return m, s
+    return m, s, posterior
 
 #def single_run_video(N=30, bounds=(0, 10), steps=1000, num_runs=1000, r=2.0):
     #k = int(r * N / (1 + r))
@@ -259,6 +260,7 @@ def single_run_test(module, N=20, bounds=(0, 20), steps=1000, num_runs=1000, r=1
     #pyplot.hist(means, bins=30)
     #pyplot.show()
     
+# r, N, initial_state, rr_mean, rr_std_dev, rr_count, mean_of_means, std_of_means, mean_of_modes, std_of_modes
 def cache_simulation_results(module, filename, Ns, rs, prior=None, bounds=None, num_runs=1000, sample_size=None, steps=1000):
     if not prior:
         prior = stats.gamma(2, scale=0.5).pdf
@@ -330,7 +332,8 @@ def cache_simulation_results(module, filename, Ns, rs, prior=None, bounds=None, 
                     #all_conjugates.append(cons)
                 #posterior = construct_posterior(N, all_conjugates, prior_points, partition, table)
                 #row.extend([posterior.mean()[0], posterior.mode()[0]])
-                #writer.writerow(map(str,row))                
+                
+                writer.writerow(map(str,row))                
                 
                 # Check for agreement with previous (much slower) method
                 #from infer2 import run_batches as run_batches2
@@ -353,6 +356,40 @@ def cache_simulation_results(module, filename, Ns, rs, prior=None, bounds=None, 
                 #print >> handle, r, N, i, " ".join(map(str, results))
                 #print r,N,i
 
+def one_trajectory(partition, N, r, prior=None, module_name="fps"):
+    module = __import__(module_name)
+    if not prior:
+        prior = stats.gamma(2, scale=0.5).pdf
+    prior_points = None
+    prior_points = partition.map(prior)
+
+    construct_posterior = module.construct_posterior
+    convert_run_to_conjugate_parameters = module.convert_run_to_conjugate_parameters
+
+    # Generate data
+    fitness_landscape = mpsim.moran.fitness_static(r)
+    table = module.likelihood_table(N, partition.points)
+
+    i = N // 2
+    igen = mpsim.generators.constant_generator((i, N-i))
+    runs = mpsim.main.two_type_moran_process_simulations(N, fitness_landscape=fitness_landscape, edge_function=module.edge_function, iterations=1, initial_state_generator=igen)
+    runs = [history for (seed, length, history) in runs]
+    run_tuples = runs[0]
+    conjugate_parameters = convert_run_to_conjugate_parameters(N, run_tuples)
+    posterior = construct_posterior(N, conjugate_parameters, prior_points, partition, table)
+    return run_tuples, posterior
+
+
+#def inference_test(N, r, table, runs, prior, partition):
+    #means = []
+    #for run_tuples in runs:
+        #posterior = construct_posterior(N, run_tuples, partition)
+        #means.append(posterior.mean()) 
+    #m = numpy.mean(means)
+    #s = numpy.std(means)
+    #return m, s, posterior
+
+
 def generate_heatmap_data():
     rs = numpy.arange(0.1,2.1,0.1)
     Ns = range(3,51,1)
@@ -371,8 +408,10 @@ if __name__ == '__main__':
     try:
         module_name = sys.argv[1]
     except IndexError:
+        #exit()
         generate_heatmap_data()
     else:
+        # These are for the variably-sized populations.
         try:
             module = __import__(module_name)
             #death_probabilities_func = mpsim.moran.sigmoid_death

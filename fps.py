@@ -27,8 +27,8 @@ def likelihood(a,b,d):
     elif d == 0: # B replicated
         def p(r):
             return b * r / (a + b * r)
-    return p
-
+    return p  
+    
 # Warning: this function is not normalized!
 def distribution(alphas, betas):
     """Computes values for FPS distribution. Warning: not normalized!"""
@@ -44,11 +44,7 @@ def distribution(alphas, betas):
             if sum_betas > 0:
                 return 0
         log_s = log_s0
-        for a in range(1, N-1):
-            #alpha = alphas[a]
-            #beta = betas[a]
-            #a = float(a)
-            #log_s += alpha * log(a) + beta * log(r*(N-a)) - (alpha + beta) * log(a + r * (N - a))
+        for a in range(1, N):
             log_s -= alphas_plus_betas[a] * log(a + r * (N - a))
         if sum_betas > 0:
             log_s += sum_betas * log(r)
@@ -62,7 +58,6 @@ def likelihood_table(N, partition_points):
     for d in [0,1]:
         table = []
         for a in range(1, N):
-            #row = []
             b = N - a
             vfunc = numpy.vectorize(likelihood(a,b,d))
             table.append(numpy.log(vfunc(partition_points)))
@@ -71,14 +66,12 @@ def likelihood_table(N, partition_points):
     
 #### Convert to use table and conjugate parameters.    
 
-# This is a much faster version utilizing numpy and log-space probability calculations.
 def construct_posterior(N, conjugate_parameters, prior_points, partition, tables):
     posterior = Posterior(partition, prior_points)
     alphas, betas = conjugate_parameters
     alphas = numpy.array([alphas])
     betas = numpy.array([betas])
     beta_table, alpha_table = tables
-    #print alphas.transpose().size, alpha_table.size
     t = numpy.dot(numpy.array([1.]*(N-1)), (alphas.transpose() * alpha_table + betas.transpose() * beta_table))
     t = lognormalize(t)
     posterior.update(t)
@@ -126,18 +119,22 @@ def convert_runs(N, runs, min_length=None, max_length=None, sample_size=None):
         return_runs.append(list(convert_run_to_tuples(N, run, max_length=max_length, sample_size=sample_size)))
     return return_runs                
                 
-#### Birth Counting
+### Birth Counting
 
-def reproduction_rate_test(parameters):
+def reproduction_rate_test(parameters, counting=False):
     means = []
     return_runs = [[],[]]
     for alphas, betas in parameters:
         N = len(alphas) + 1
         x = 0.
         y = 0.
-        for a in range(1, len(alphas)-1):
-            x += alphas[a-1] / float(a)
-            y += betas[a-1]/ float(N-a)
+        if counting:
+            x = sum(alphas)
+            y = sum(betas)
+        else:
+            for a in range(1, len(alphas)-1):
+                x += alphas[a-1] / float(a)
+                y += betas[a-1]/ float(N-a)
         if x != 0:
             means.append(y / x)
             return_runs[0].append((alphas, betas))

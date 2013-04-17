@@ -29,32 +29,6 @@ def likelihood(a,b,d):
             return b * r / (a + b * r)
     return p
 
-## Warning: this function is not normalized!
-#def distribution(alphas, betas):
-    #"""Computes values for FPS distribution. Warning: not normalized!"""
-    #N = len(alphas)
-    #log = math.log
-    #log_s0 = 0.
-    #sum_betas = sum(betas) - betas[0]
-    #alphas_plus_betas = [alphas[i] + betas[i] for i in range(0, len(alphas))]
-    #for a in range(1, N):
-        #log_s0 += alphas[a] * log(a)  + betas[a] * log(N-a)
-    #def p(r):
-        #if r == 0:
-            #if sum_betas > 0:
-                #return 0
-        #log_s = log_s0
-        #for a in range(1, N-1):
-            ##alpha = alphas[a]
-            ##beta = betas[a]
-            ##a = float(a)
-            ##log_s += alpha * log(a) + beta * log(r*(N-a)) - (alpha + beta) * log(a + r * (N - a))
-            #log_s -= alphas_plus_betas[a] * log(a + r * (N - a))
-        #if sum_betas > 0:
-            #log_s += sum_betas * log(r)
-        #return math.exp(log_s)
-    #return p
-
 def likelihood_table(N, partition_points):
     """Precompute likelihood functions on partitions for computational efficiency."""
     all_tables = []
@@ -64,7 +38,6 @@ def likelihood_table(N, partition_points):
         for d in [0,1]:
             table = []
             for a in range(1, n):
-                #row = []
                 b = n - a
                 vfunc = numpy.vectorize(likelihood(a,b,d))
                 table.append(numpy.log(vfunc(partition_points)))
@@ -80,20 +53,12 @@ def construct_posterior(N, conjugate_parameters, prior_points, partition, tables
     all_alphas, all_betas = conjugate_parameters
     t = numpy.array([0.]*(len(partition.points)))
     for i in range(2, N):
-        #print i
         alphas = numpy.array([all_alphas[i]])
         betas = numpy.array([all_betas[i]])
         beta_table, alpha_table = tables[i]
-        #print alphas.size, betas.size
-        #print alpha_table.size, beta_table.size
         s1 = alphas.transpose() * alpha_table
         s2 = betas.transpose() * beta_table
-        #print s1
-        #print s2
-        #print s1.size, s2.size
         s3 = numpy.array([1.]*(i))
-        #print s3
-        #print s3.size
         t += numpy.dot(numpy.array([1.]*(i)), (alphas.transpose() * alpha_table + betas.transpose() * beta_table))
         t = lognormalize(t)
         posterior.update(t)
@@ -103,14 +68,6 @@ def construct_posterior(N, conjugate_parameters, prior_points, partition, tables
 
 def tuples_to_conjugate_parameters(N, tuples):
     """Reduce the run tuples to counts for the parameters alpha and beta."""
-    #alphas = defaultdict(int)
-    #betas = defaultdict(int)
-    #for (((a1, b1), (a2, b2)) in tuples:
-        #if a2 == a1 + 1
-            #alphas[(a1, b1)] += 1
-        #elif b2 == b1 + 1:
-            #betas[(a1, b1)] += 1
-    #return (alphas, betas)
     alphas = []
     betas = []
     for i in range(1, N+1):
@@ -174,17 +131,3 @@ def reproduction_rate_test(parameters):
         else:
             return_runs[1].append((alphas, betas))
     return return_runs, numpy.mean(means), numpy.std(means), len(means)
-    
-#def reproduction_rate_test(parameters):
-    #means = []
-    #return_runs = [[],[]]
-    #for alphas, betas in parameters:
-        #x = sum(sum(a) for a in alphas)
-        #y = sum(sum(b) for b in betas)
-        #if x != 0:
-            #means.append(y / x)
-            #return_runs[0].append((alphas, betas))
-        #else:
-            #return_runs[1].append((alphas, betas))
-    #return return_runs, numpy.mean(means), numpy.std(means), len(means)
-
